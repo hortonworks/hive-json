@@ -14,3 +14,6 @@ Building the jar:
 Run the program:
 
 % bin/find-json-schema *.json.gz
+
+I've uploaded the discovered schema for githubarchive.org to
+https://gist.github.com/omalley/5125691.
