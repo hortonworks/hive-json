@@ -501,7 +501,7 @@ public class JsonSchemaFinder {
         out.print(' ');
       }
       out.print(field.getKey());
-      out.print(": ");
+      out.print(" ");
       printType(out, field.getValue(), 2 * INDENT);
     }
     out.println();
