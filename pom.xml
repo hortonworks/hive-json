@@ -9,6 +9,14 @@
 
   <name>Hive-JSON</name>
   <url>http://hive.apache.org</url>
+ <!-- fix Could not find artifact javax.jdo:jdo2-api:jar:2.3-ec  -->
+  <repositories>
+    <repository>
+      <id>repository.cloudera.com</id>
+      <name>repository.cloudera.com-releases</name>
+      <url>https://repository.cloudera.com/artifactory/datanucleus</url>
+    </repository>
+  </repositories>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
