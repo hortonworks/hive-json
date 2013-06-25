@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hive.json;
 
 import com.google.gson.JsonArray;
@@ -436,55 +453,59 @@ public class JsonSchemaFinder {
   }
 
   private static void printType(PrintStream out, HiveType type, int margin) {
-    switch (type.kind) {
-      case BINARY:
-      case BOOLEAN:
-      case FLOATING_POINT:
-      case INTEGER:
-      case NULL:
-      case STRING:
-      case TIMESTAMP:
-        out.print(type.toString());
-        break;
-      case STRUCT:
-        out.println("struct <");
-        boolean first = true;
-        for(Map.Entry<String, HiveType> field:
-            ((StructType) type).fields.entrySet()) {
-          if (!first) {
-            out.println(",");
-          } else {
-            first = false;
+    if (type == null) {
+      out.print("VOID");
+    } else {
+      switch (type.kind) {
+        case BINARY:
+        case BOOLEAN:
+        case FLOATING_POINT:
+        case INTEGER:
+        case NULL:
+        case STRING:
+        case TIMESTAMP:
+          out.print(type.toString());
+          break;
+        case STRUCT:
+          out.println("struct <");
+          boolean first = true;
+          for(Map.Entry<String, HiveType> field:
+              ((StructType) type).fields.entrySet()) {
+            if (!first) {
+              out.println(",");
+            } else {
+              first = false;
+            }
+            for(int i=0; i < margin; i++) {
+              out.print(' ');
+            }
+            out.print(field.getKey());
+            out.print(": ");
+            printType(out, field.getValue(), margin + INDENT);
           }
-          for(int i=0; i < margin; i++) {
-            out.print(' ');
+          out.print(">");
+          break;
+        case LIST:
+          out.print("array <");
+          printType(out, ((ListType) type).elementType, margin + INDENT);
+          out.print(">");
+          break;
+        case UNION:
+          out.print("uniontype <");
+          first = true;
+          for(HiveType child: ((UnionType) type).children) {
+            if (!first) {
+              out.print(',');
+            } else {
+              first = false;
+            }
+            printType(out, child, margin + INDENT);
           }
-          out.print(field.getKey());
-          out.print(": ");
-          printType(out, field.getValue(), margin + INDENT);
-        }
-        out.print(">");
-        break;
-      case LIST:
-        out.print("array <");
-        printType(out, ((ListType) type).elementType, margin + INDENT);
-        out.print(">");
-        break;
-      case UNION:
-        out.print("uniontype <");
-        first = true;
-        for(HiveType child: ((UnionType) type).children) {
-          if (!first) {
-            out.print(',');
-          } else {
-            first = false;
-          }
-          printType(out, child, margin + INDENT);
-        }
-        out.print(">");
-        break;
-      default:
-        throw new IllegalArgumentException("Unknown kind " + type.kind);
+          out.print(">");
+          break;
+        default:
+          throw new IllegalArgumentException("Unknown kind " + type.kind);
+      }
     }
   }
 
