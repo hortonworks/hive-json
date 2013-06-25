@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+gsonVersion = "2.2.2"
+ourVersion = "1.0-SNAPSHOT"
+
+home = os.path.expanduser('~')
+gsonJar = os.path.abspath(os.path.join(home, ".m2", "repository", "com",
+	"google", "code", "gson", "gson", gsonVersion, 
+	"gson-%s.jar" % gsonVersion))
+ourJar = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+       "target", "hive-json-%s.jar" % ourVersion))
+
+if not os.path.exists(gsonJar):
+  print >> sys.stderr, "Can't find %s. Please build." % gsonJar
+  sys.exit(1)
+if not os.path.exists(ourJar):
+  print >> sys.stderr, "Can't find %s. Please build." % ourJar
+  sys.exit(1)
+
+os.system("java -Xmx2500m -cp %s:%s org.apache.hadoop.hive.json.DictionaryEncoder %s" % 
+		(gsonJar, ourJar, " ".join(sys.argv[1:])))
