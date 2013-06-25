@@ -9,7 +9,14 @@
 
   <name>Hive-JSON</name>
   <url>http://hive.apache.org</url>
-
+  <repositories>
+    <repository>
+      <id>data-nucleus</id>
+      <name>data-nucleus</name>
+      <url>http://www.datanucleus.org/downloads/maven2/</url>
+    </repository>
+  </repositories>
+    
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
