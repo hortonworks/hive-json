@@ -61,6 +61,22 @@ public class JsonSchemaFinder {
       }
       return ((HiveType) other).kind.equals(kind);
     }
+
+    @Override
+    public int hashCode() {
+      return kind.hashCode();
+    }
+
+    boolean isStringType() {
+      switch (kind) {
+        case STRING:
+        case TIMESTAMP:
+        case BINARY:
+          return true;
+        default:
+          return false;
+      }
+    }
   }
 
   private static class NullType extends HiveType {
@@ -108,6 +124,16 @@ public class JsonSchemaFinder {
         return "bigint";
       }
     }
+
+    @Override
+    public boolean equals(Object other) {
+      if (other == null || other.getClass() != IntegerType.class) {
+        return false;
+      }
+
+      IntegerType that = (IntegerType) other;
+      return this.minValue == that.minValue && this.maxValue == that.maxValue;
+    }
   }
 
   private static class FloatingPointType extends HiveType {
@@ -128,6 +154,16 @@ public class JsonSchemaFinder {
       } else {
         return "float";
       }
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (other == null || other.getClass() != FloatingPointType.class) {
+        return false;
+      }
+
+      FloatingPointType that = (FloatingPointType) other;
+      return this.minValue == that.minValue && this.maxValue == that.maxValue;
     }
   }
 
