@@ -10,7 +10,7 @@ home = os.path.expanduser('~')
 gsonJar = os.path.abspath(os.path.join(home, ".m2", "repository", "com",
 	"google", "code", "gson", "gson", gsonVersion, 
 	"gson-%s.jar" % gsonVersion))
-ourJar = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+ourJar = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..",
        "target", "hive-json-%s.jar" % ourVersion))
 
 if not os.path.exists(gsonJar):
