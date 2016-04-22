@@ -61,6 +61,22 @@ public class JsonSchemaFinder {
       }
       return ((HiveType) other).kind.equals(kind);
     }
+
+    @Override
+    public int hashCode() {
+      return kind.hashCode();
+    }
+
+    boolean isStringType() {
+      switch (kind) {
+        case STRING:
+        case TIMESTAMP:
+        case BINARY:
+          return true;
+        default:
+          return false;
+      }
+    }
   }
 
   private static class NullType extends HiveType {
@@ -108,6 +124,16 @@ public class JsonSchemaFinder {
         return "bigint";
       }
     }
+
+    @Override
+    public boolean equals(Object other) {
+      if (other == null || other.getClass() != IntegerType.class) {
+        return false;
+      }
+
+      IntegerType that = (IntegerType) other;
+      return this.minValue == that.minValue && this.maxValue == that.maxValue;
+    }
   }
 
   private static class FloatingPointType extends HiveType {
@@ -128,6 +154,16 @@ public class JsonSchemaFinder {
       } else {
         return "float";
       }
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (other == null || other.getClass() != FloatingPointType.class) {
+        return false;
+      }
+
+      FloatingPointType that = (FloatingPointType) other;
+      return this.minValue == that.minValue && this.maxValue == that.maxValue;
     }
   }
 
@@ -228,6 +264,33 @@ public class JsonSchemaFinder {
     }
   }
 
+  private static HiveType.Kind lub(HiveType.Kind a, HiveType.Kind b) {
+    if (a == b) {
+      return a;
+    }
+
+    if (a.ordinal() > b.ordinal()) {
+      HiveType.Kind x = a;
+      a = b;
+      b = x;
+    }
+
+    switch (a) {
+      case NULL:
+        return b;
+      case STRING:
+        if (b == HiveType.Kind.TIMESTAMP || b == HiveType.Kind.BINARY) {
+          return a;
+        }
+      case INTEGER:
+        if (b == HiveType.Kind.FLOATING_POINT) {
+          return b;
+        }
+      default:
+        return HiveType.Kind.UNION;
+    }
+  }
+
   private static class UnionType extends HiveType {
     List<HiveType> children = new ArrayList<HiveType>();
     UnionType() {
@@ -240,7 +303,26 @@ public class JsonSchemaFinder {
     }
 
     void addType(HiveType type) {
-      if (!children.contains(type)) {
+      if (type.kind == Kind.UNION) {
+        UnionType that = (UnionType) type;
+        for (HiveType child : that.children) {
+          addType(child);
+        }
+      }
+      else {
+        for (int i = 0; i < children.size(); i++) {
+          HiveType child = children.get(i);
+          if (child.kind == type.kind) {
+            if (!child.equals(type)) {
+              children.set(i, mergeSameType(child, type));
+            }
+            return;
+          }
+          if (lub(child.kind, type.kind) != Kind.UNION) {
+            children.set(i, mergeType(type, child));
+            return;
+          }
+        }
         children.add(type);
       }
     }
@@ -337,17 +419,6 @@ public class JsonSchemaFinder {
     }
   }
 
-  private static void mergeUnionChildType(List<HiveType> left, HiveType right) {
-    for(int i=0; i < left.size(); ++i) {
-      HiveType child = left.get(i);
-      if (child.kind == right.kind) {
-        left.set(i, mergeSameType(child, right));
-        return;
-      }
-    }
-    left.add(right);
-  }
-
   private static HiveType mergeSameType(HiveType left, HiveType right) {
     switch (left.kind) {
       case NULL:
@@ -387,10 +458,7 @@ public class JsonSchemaFinder {
         return leftStruct;
       case UNION:
         UnionType leftUnion = (UnionType) left;
-        UnionType rightUnion = (UnionType) right;
-        for(HiveType rightChild: rightUnion.children) {
-          mergeUnionChildType(leftUnion.children, rightChild);
-        }
+        leftUnion.addType(right);
         return leftUnion;
       case LIST:
         ListType leftList = (ListType) left;
@@ -428,27 +496,38 @@ public class JsonSchemaFinder {
           rightFloat.minValue = Math.min(rightFloat.minValue, leftInt.minValue);
           rightFloat.maxValue = Math.max(rightFloat.maxValue, leftInt.maxValue);
           return rightFloat;
-        } else {
-          return new UnionType(previous, type);
         }
+        else {
+          return union(previous, type);
+        }
+
       case STRING:
-        if (type.kind == HiveType.Kind.BINARY) {
+        if (type.isStringType()) {
           return previous;
         }
+
       case BOOLEAN:
       case FLOATING_POINT:
       case BINARY:
       case LIST:
       case STRUCT:
       case TIMESTAMP:
-        if (type.kind == HiveType.Kind.UNION) {
-          ((UnionType) type).addType(previous);
-          return type;
-        } else {
-          return new UnionType(previous, type);
-        }
+        return union(previous, type);
       default:
         throw new IllegalArgumentException("Unknown type: " + previous.kind);
+    }
+  }
+
+  private static HiveType union(HiveType left, HiveType right) {
+    assert left.kind.ordinal() < right.kind.ordinal();
+
+    if (right.kind == HiveType.Kind.UNION) {
+      UnionType u = (UnionType) right;
+      u.addType(left);
+      return u;
+    }
+    else {
+      return new UnionType(left, right);
     }
   }
 
