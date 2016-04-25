@@ -29,15 +29,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 public class JsonShredder {
@@ -57,20 +50,12 @@ public class JsonShredder {
   private void shredObject(String name, JsonElement json) throws IOException {
     if (json.isJsonPrimitive()) {
       JsonPrimitive primitive = (JsonPrimitive) json;
-      if (primitive.isBoolean()) {
-        getFile(name).append(primitive.getAsBoolean() + "\n");
-      } else if (primitive.isString()) {
-        getFile(name).append(primitive.getAsString()
-                               .replace("\\", "\\\\")
-                               .replace("\n", "\\n") + "\n");
-      } else if (primitive.isNumber()) {
-        getFile(name).append(primitive.getAsNumber() + "\n");
-      }
+      getFile(name).println(primitive.getAsString());
     } else if (json.isJsonNull()) {
       // just skip it
     } else if (json.isJsonArray()) {
       for(JsonElement child: ((JsonArray) json)) {
-        shredObject(name, child);
+        shredObject(name + ".list", child);
       }
     } else {
       JsonObject obj = (JsonObject) json;
