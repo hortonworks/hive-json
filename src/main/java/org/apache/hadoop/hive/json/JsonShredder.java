@@ -33,6 +33,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
+/**
+ * This class takes a set of JSON documents and shreds them into a file per
+ * a primitive column. This is useful when trying to understand a set of
+ * documents by providing sample values for each of the columns.
+ *
+ * For example, a document that looks like:
+ * {'a': 'aaaa', 'b': { 'c': 12, 'd': true}, e: 'eeee'}
+ *
+ * Will produce 4 files with the given contents:
+ * root.a: aaaa
+ * root.b.c: 12
+ * root.b.d: true
+ * root.e: eeee
+ */
 public class JsonShredder {
 
   private final Map<String, PrintStream> files =
