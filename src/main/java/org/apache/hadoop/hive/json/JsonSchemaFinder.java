@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,6 +52,47 @@ public class JsonSchemaFinder {
 
   static final BigInteger MIN_LONG = new BigInteger("-9223372036854775808");
   static final BigInteger MAX_LONG = new BigInteger("9223372036854775807");
+
+  /**
+   * Check and modify the column name to correct format with allowable characters
+   * and no conflict with hive reserved keywords.
+   *
+   * @param fieldName
+   * @return the rectified field name.
+   */
+  static String fieldNameRectify(String fieldName) {
+    fieldName = fieldName.replaceFirst("^_+", "");
+    fieldName = fieldName.replaceAll("[^0-9a-zA-Z_]+", "");
+    String reservedKeywords = new String(
+      ",ADD,ADMIN,AFTER,ALL,ALTER,ANALYZE,AND,ARCHIVE,ARRAY,AS,ASC,AUTHORIZATION,BEFORE,BETWEEN," +
+      "BIGINT,BINARY,BOOLEAN,BOTH,BUCKET,BUCKETS,BY,CASCADE,CASE,CAST,CHANGE,CHAR,CLUSTER," +
+      "CLUSTERED,CLUSTERSTATUS,COLLECTION,COLUMN,COLUMNS,COMMENT,COMPACT,COMPACTIONS,COMPUTE," +
+      "CONCATENATE,CONF,CONTINUE,CREATE,CROSS,CUBE,CURRENT,CURRENT_DATE,CURRENT_TIMESTAMP,CURSOR," +
+      "DATA,DATABASE,DATABASES,DATE,DATETIME,DAY,DBPROPERTIES,DECIMAL,DEFERRED,DEFINED,DELETE," +
+      "DELIMITED,DEPENDENCY,DESC,DESCRIBE,DIRECTORIES,DIRECTORY,DISABLE,DISTINCT,DISTRIBUTE," +
+      "DOUBLE,DROP,ELEM_TYPE,ELSE,ENABLE,END,ESCAPED,EXCHANGE,EXCLUSIVE,EXISTS,EXPLAIN,EXPORT," +
+      "EXTENDED,EXTERNAL,FALSE,FETCH,FIELDS,FILE,FILEFORMAT,FIRST,FLOAT,FOLLOWING,FOR,FORMAT," +
+      "FORMATTED,FROM,FULL,FUNCTION,FUNCTIONS,GRANT,GROUP,GROUPING,HAVING,HOLD_DDLTIME,HOUR," +
+      "IDXPROPERTIES,IF,IGNORE,IMPORT,IN,INDEX,INDEXES,INNER,INPATH,INPUTDRIVER,INPUTFORMAT," +
+      "INSERT,INT,INTERSECT,INTERVAL,INTO,IS,ITEMS,JAR,JOIN,KEYS,KEY_TYPE,LATERAL,LEFT,LESS," +
+      "LIKE,LIMIT,LINES,LOAD,LOCAL,LOCATION,LOCK,LOCKS,LOGICAL,LONG,MACRO,MAP,MAPJOIN," +
+      "MATERIALIZED,MINUS,MINUTE,MONTH,MORE,MSCK,NONE,NOSCAN,NOT,NO_DROP,NULL,OF,OFFLINE,ON," +
+      "OPTION,OR,ORDER,OUT,OUTER,OUTPUTDRIVER,OUTPUTFORMAT,OVER,OVERWRITE,OWNER,PARTIALSCAN," +
+      "PARTITION,PARTITIONED,PARTITIONS,PERCENT,PLUS,PRECEDING,PRESERVE,PRETTY,PRINCIPALS," +
+      "PROCEDURE,PROTECTION,PURGE,RANGE,READ,READONLY,READS,REBUILD,RECORDREADER,RECORDWRITER," +
+      "REDUCE,REGEXP,RELOAD,RENAME,REPAIR,REPLACE,RESTRICT,REVOKE,REWRITE,RIGHT,RLIKE,ROLE,ROLES," +
+      "ROLLUP,ROW,ROWS,SCHEMA,SCHEMAS,SECOND,SELECT,SEMI,SERDE,SERDEPROPERTIES,SERVER,SET,SETS," +
+      "SHARED,SHOW,SHOW_DATABASE,SKEWED,SMALLINT,SORT,SORTED,SSL,STATISTICS,STORED,STREAMTABLE," +
+      "STRING,STRUCT,TABLE,TABLES,TABLESAMPLE,TBLPROPERTIES,TEMPORARY,TERMINATED,THEN,TIMESTAMP," +
+      "TINYINT,TO,TOUCH,TRANSACTIONS,TRANSFORM,TRIGGER,TRUE,TRUNCATE,UNARCHIVE,UNBOUNDED,UNDO," +
+      "UNION,UNIONTYPE,UNIQUEJOIN,UNLOCK,UNSET,UNSIGNED,UPDATE,URI,USE,USER,USING,UTC," +
+      "UTCTIMESTAMP,VALUES,VALUE_TYPE,VARCHAR,VIEW,WHEN,WHERE,WHILE,WINDOW,WITH,YEAR,");
+    if (reservedKeywords.contains("," + fieldName + ",") ||
+      reservedKeywords.toLowerCase().contains("," + fieldName + ",")) {
+      fieldName = fieldName.concat("_");
+    }
+    return fieldName;
+  }
 
   static HiveType pickType(JsonElement json) {
     if (json.isJsonPrimitive()) {
@@ -126,6 +167,7 @@ public class JsonSchemaFinder {
       StructType result = new StructType();
       for(Map.Entry<String,JsonElement> field: obj.entrySet()) {
         String fieldName = field.getKey();
+        fieldName = fieldNameRectify(fieldName);
         HiveType type = pickType(field.getValue());
         result.fields.put(fieldName, type);
       }
