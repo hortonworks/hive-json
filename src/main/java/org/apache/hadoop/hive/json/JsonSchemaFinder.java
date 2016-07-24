@@ -34,24 +34,26 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 /**
- * This class determines the equivalent Hive schema for a group of JSON
- * documents.
- * boolean
+ * This class determines the equivalent Hive schema for a group of JSON documents.
  */
 public class JsonSchemaFinder {
   private static final Pattern HEX_PATTERN =
-      Pattern.compile("^([0-9a-fA-F][0-9a-fA-F])+$");
+    Pattern.compile("^([0-9a-fA-F][0-9a-fA-F])+$");
   private static final Pattern TIMESTAMP_PATTERN =
-      Pattern.compile("^[\"]?([0-9]{4}[-/][0-9]{2}[-/][0-9]{2})[T ]" +
-          "([0-9]{2}:[0-9]{2}:[0-9]{2})" +
-          "(([ ][-+]?[0-9]{2}([:][0-9]{2})?)|Z)?[\"]?$");
+    Pattern.compile("^[\"]?([0-9]{4}[-/][0-9]{2}[-/][0-9]{2})[T ]" +
+      "([0-9]{2}:[0-9]{2}:[0-9]{2})" +
+      "(([ ][-+]?[0-9]{2}([:][0-9]{2})?)|Z)?[\"]?$");
   private static final Pattern DECIMAL_PATTERN =
-      Pattern.compile("^-?(?<int>[0-9]+)([.](?<fraction>[0-9]+))?$");
+    Pattern.compile("^-?(?<int>[0-9]+)([.](?<fraction>[0-9]+))?$");
   private static final int INDENT = 2;
   private static final int MAX_DECIMAL_DIGITS = 38;
 
   static final BigInteger MIN_LONG = new BigInteger("-9223372036854775808");
   static final BigInteger MAX_LONG = new BigInteger("9223372036854775807");
+
+  private static String rowFormatDelimited = "row format delimited\n" +
+    "  fields terminated by ','\n" + "  collection items terminated by '$'\n" +
+    "  map keys terminated by '#'";
 
   /**
    * Check and modify the column name to correct format with allowable characters
@@ -61,32 +63,31 @@ public class JsonSchemaFinder {
    * @return the rectified field name.
    */
   static String fieldNameRectify(String fieldName) {
-    fieldName = fieldName.replaceFirst("^_+", "");
-    fieldName = fieldName.replaceAll("[^0-9a-zA-Z_]+", "");
+    fieldName = fieldName.replaceFirst("^_+", "").replaceAll("[^0-9a-zA-Z_]+", "");
     String reservedKeywords = new String(
       ",ADD,ADMIN,AFTER,ALL,ALTER,ANALYZE,AND,ARCHIVE,ARRAY,AS,ASC,AUTHORIZATION,BEFORE,BETWEEN," +
-      "BIGINT,BINARY,BOOLEAN,BOTH,BUCKET,BUCKETS,BY,CASCADE,CASE,CAST,CHANGE,CHAR,CLUSTER," +
-      "CLUSTERED,CLUSTERSTATUS,COLLECTION,COLUMN,COLUMNS,COMMENT,COMPACT,COMPACTIONS,COMPUTE," +
-      "CONCATENATE,CONF,CONTINUE,CREATE,CROSS,CUBE,CURRENT,CURRENT_DATE,CURRENT_TIMESTAMP,CURSOR," +
-      "DATA,DATABASE,DATABASES,DATE,DATETIME,DAY,DBPROPERTIES,DECIMAL,DEFERRED,DEFINED,DELETE," +
-      "DELIMITED,DEPENDENCY,DESC,DESCRIBE,DIRECTORIES,DIRECTORY,DISABLE,DISTINCT,DISTRIBUTE," +
-      "DOUBLE,DROP,ELEM_TYPE,ELSE,ENABLE,END,ESCAPED,EXCHANGE,EXCLUSIVE,EXISTS,EXPLAIN,EXPORT," +
-      "EXTENDED,EXTERNAL,FALSE,FETCH,FIELDS,FILE,FILEFORMAT,FIRST,FLOAT,FOLLOWING,FOR,FORMAT," +
-      "FORMATTED,FROM,FULL,FUNCTION,FUNCTIONS,GRANT,GROUP,GROUPING,HAVING,HOLD_DDLTIME,HOUR," +
-      "IDXPROPERTIES,IF,IGNORE,IMPORT,IN,INDEX,INDEXES,INNER,INPATH,INPUTDRIVER,INPUTFORMAT," +
-      "INSERT,INT,INTERSECT,INTERVAL,INTO,IS,ITEMS,JAR,JOIN,KEYS,KEY_TYPE,LATERAL,LEFT,LESS," +
-      "LIKE,LIMIT,LINES,LOAD,LOCAL,LOCATION,LOCK,LOCKS,LOGICAL,LONG,MACRO,MAP,MAPJOIN," +
-      "MATERIALIZED,MINUS,MINUTE,MONTH,MORE,MSCK,NONE,NOSCAN,NOT,NO_DROP,NULL,OF,OFFLINE,ON," +
-      "OPTION,OR,ORDER,OUT,OUTER,OUTPUTDRIVER,OUTPUTFORMAT,OVER,OVERWRITE,OWNER,PARTIALSCAN," +
-      "PARTITION,PARTITIONED,PARTITIONS,PERCENT,PLUS,PRECEDING,PRESERVE,PRETTY,PRINCIPALS," +
-      "PROCEDURE,PROTECTION,PURGE,RANGE,READ,READONLY,READS,REBUILD,RECORDREADER,RECORDWRITER," +
-      "REDUCE,REGEXP,RELOAD,RENAME,REPAIR,REPLACE,RESTRICT,REVOKE,REWRITE,RIGHT,RLIKE,ROLE,ROLES," +
-      "ROLLUP,ROW,ROWS,SCHEMA,SCHEMAS,SECOND,SELECT,SEMI,SERDE,SERDEPROPERTIES,SERVER,SET,SETS," +
-      "SHARED,SHOW,SHOW_DATABASE,SKEWED,SMALLINT,SORT,SORTED,SSL,STATISTICS,STORED,STREAMTABLE," +
-      "STRING,STRUCT,TABLE,TABLES,TABLESAMPLE,TBLPROPERTIES,TEMPORARY,TERMINATED,THEN,TIMESTAMP," +
-      "TINYINT,TO,TOUCH,TRANSACTIONS,TRANSFORM,TRIGGER,TRUE,TRUNCATE,UNARCHIVE,UNBOUNDED,UNDO," +
-      "UNION,UNIONTYPE,UNIQUEJOIN,UNLOCK,UNSET,UNSIGNED,UPDATE,URI,USE,USER,USING,UTC," +
-      "UTCTIMESTAMP,VALUES,VALUE_TYPE,VARCHAR,VIEW,WHEN,WHERE,WHILE,WINDOW,WITH,YEAR,");
+        "BIGINT,BINARY,BOOLEAN,BOTH,BUCKET,BUCKETS,BY,CASCADE,CASE,CAST,CHANGE,CHAR,CLUSTER," +
+        "CLUSTERED,CLUSTERSTATUS,COLLECTION,COLUMN,COLUMNS,COMMENT,COMPACT,COMPACTIONS,COMPUTE," +
+        "CONCATENATE,CONF,CONTINUE,CREATE,CROSS,CUBE,CURRENT,CURRENT_DATE,CURRENT_TIMESTAMP,CURSOR," +
+        "DATA,DATABASE,DATABASES,DATE,DATETIME,DAY,DBPROPERTIES,DECIMAL,DEFERRED,DEFINED,DELETE," +
+        "DELIMITED,DEPENDENCY,DESC,DESCRIBE,DIRECTORIES,DIRECTORY,DISABLE,DISTINCT,DISTRIBUTE," +
+        "DOUBLE,DROP,ELEM_TYPE,ELSE,ENABLE,END,ESCAPED,EXCHANGE,EXCLUSIVE,EXISTS,EXPLAIN,EXPORT," +
+        "EXTENDED,EXTERNAL,FALSE,FETCH,FIELDS,FILE,FILEFORMAT,FIRST,FLOAT,FOLLOWING,FOR,FORMAT," +
+        "FORMATTED,FROM,FULL,FUNCTION,FUNCTIONS,GRANT,GROUP,GROUPING,HAVING,HOLD_DDLTIME,HOUR," +
+        "IDXPROPERTIES,IF,IGNORE,IMPORT,IN,INDEX,INDEXES,INNER,INPATH,INPUTDRIVER,INPUTFORMAT," +
+        "INSERT,INT,INTERSECT,INTERVAL,INTO,IS,ITEMS,JAR,JOIN,KEYS,KEY_TYPE,LATERAL,LEFT,LESS," +
+        "LIKE,LIMIT,LINES,LOAD,LOCAL,LOCATION,LOCK,LOCKS,LOGICAL,LONG,MACRO,MAP,MAPJOIN," +
+        "MATERIALIZED,MINUS,MINUTE,MONTH,MORE,MSCK,NONE,NOSCAN,NOT,NO_DROP,NULL,OF,OFFLINE,ON," +
+        "OPTION,OR,ORDER,OUT,OUTER,OUTPUTDRIVER,OUTPUTFORMAT,OVER,OVERWRITE,OWNER,PARTIALSCAN," +
+        "PARTITION,PARTITIONED,PARTITIONS,PERCENT,PLUS,PRECEDING,PRESERVE,PRETTY,PRINCIPALS," +
+        "PROCEDURE,PROTECTION,PURGE,RANGE,READ,READONLY,READS,REBUILD,RECORDREADER,RECORDWRITER," +
+        "REDUCE,REGEXP,RELOAD,RENAME,REPAIR,REPLACE,RESTRICT,REVOKE,REWRITE,RIGHT,RLIKE,ROLE,ROLES," +
+        "ROLLUP,ROW,ROWS,SCHEMA,SCHEMAS,SECOND,SELECT,SEMI,SERDE,SERDEPROPERTIES,SERVER,SET,SETS," +
+        "SHARED,SHOW,SHOW_DATABASE,SKEWED,SMALLINT,SORT,SORTED,SSL,STATISTICS,STORED,STREAMTABLE," +
+        "STRING,STRUCT,TABLE,TABLES,TABLESAMPLE,TBLPROPERTIES,TEMPORARY,TERMINATED,THEN,TIMESTAMP," +
+        "TINYINT,TO,TOUCH,TRANSACTIONS,TRANSFORM,TRIGGER,TRUE,TRUNCATE,UNARCHIVE,UNBOUNDED,UNDO," +
+        "UNION,UNIONTYPE,UNIQUEJOIN,UNLOCK,UNSET,UNSIGNED,UPDATE,URI,USE,USER,USING,UTC," +
+        "UTCTIMESTAMP,VALUES,VALUE_TYPE,VARCHAR,VIEW,WHEN,WHERE,WHILE,WINDOW,WITH,YEAR,");
     if (reservedKeywords.contains("," + fieldName + ",") ||
       reservedKeywords.toLowerCase().contains("," + fieldName + ",")) {
       fieldName = fieldName.concat("_");
@@ -150,7 +151,7 @@ public class JsonSchemaFinder {
     } else if (json.isJsonArray()) {
       ListType result = new ListType();
       result.elementType = new NullType();
-      for(JsonElement child: ((JsonArray) json)) {
+      for (JsonElement child : ((JsonArray) json)) {
         HiveType sub = pickType(child);
         if (result.elementType.subsumes(sub)) {
           result.elementType.merge(sub);
@@ -165,7 +166,7 @@ public class JsonSchemaFinder {
     } else {
       JsonObject obj = (JsonObject) json;
       StructType result = new StructType();
-      for(Map.Entry<String,JsonElement> field: obj.entrySet()) {
+      for (Map.Entry<String, JsonElement> field : obj.entrySet()) {
         String fieldName = field.getKey();
         fieldName = fieldNameRectify(fieldName);
         HiveType type = pickType(field.getValue());
@@ -202,14 +203,14 @@ public class JsonSchemaFinder {
         case STRUCT:
           out.println("struct <");
           boolean first = true;
-          for(Map.Entry<String, HiveType> field:
-              ((StructType) type).fields.entrySet()) {
+          for (Map.Entry<String, HiveType> field :
+            ((StructType) type).fields.entrySet()) {
             if (!first) {
               out.println(",");
             } else {
               first = false;
             }
-            for(int i=0; i < margin; i++) {
+            for (int i = 0; i < margin; i++) {
               out.print(' ');
             }
             out.print(field.getKey());
@@ -226,7 +227,7 @@ public class JsonSchemaFinder {
         case UNION:
           out.print("uniontype <");
           first = true;
-          for(HiveType child: ((UnionType) type).children) {
+          for (HiveType child : ((UnionType) type).children) {
             if (!first) {
               out.print(',');
             } else {
@@ -242,16 +243,22 @@ public class JsonSchemaFinder {
     }
   }
 
-  static void printTopType(PrintStream out, StructType type) {
-    out.println("create table tbl (");
+  /**
+   * Print each field of the StructType to create a Hive table.
+   * @param out
+   * @param type
+   * @param tableName
+   */
+  static void printTopType(PrintStream out, StructType type, String tableName) {
+    out.println("create table " + tableName + " (");
     boolean first = true;
-    for(Map.Entry<String, HiveType> field: type.fields.entrySet()) {
+    for (Map.Entry<String, HiveType> field : type.fields.entrySet()) {
       if (!first) {
         out.println(",");
       } else {
         first = false;
       }
-      for(int i=0; i < INDENT; ++i) {
+      for (int i = 0; i < INDENT; ++i) {
         out.print(' ');
       }
       out.print(field.getKey());
@@ -260,23 +267,28 @@ public class JsonSchemaFinder {
     }
     out.println();
     out.println(")");
+    out.println(rowFormatDelimited);
   }
 
   public static void main(String[] args) throws Exception {
+    if (args.length < 2) {
+      System.err.println("parameter error: at least one input file followed by a table name.");
+      System.exit(1);
+    }
     HiveType result = null;
     boolean flat = false;
     int count = 0;
-    for (String filename: args) {
-      if ("-f".equals(filename)) {
+    for (int i = 0; i < args.length - 1; i++) {
+      if ("-f".equals(args[i])) {
         flat = true;
       } else {
-        System.err.println("Reading " + filename);
+        System.err.println("Reading " + args[i]);
         System.err.flush();
         java.io.Reader reader;
-        if (filename.endsWith(".gz")) {
-          reader = new InputStreamReader(new GZIPInputStream(new FileInputStream(filename)));
+        if (args[i].endsWith(".gz")) {
+          reader = new InputStreamReader(new GZIPInputStream(new FileInputStream(args[i])));
         } else {
-          reader = new FileReader(filename);
+          reader = new FileReader(args[i]);
         }
         JsonStreamParser parser = new JsonStreamParser(reader);
         while (parser.hasNext()) {
@@ -292,7 +304,7 @@ public class JsonSchemaFinder {
     if (flat) {
       result.printFlat(System.out, "root");
     } else {
-      printTopType(System.out, (StructType) result);
+      printTopType(System.out, (StructType) result, args[args.length - 1]);
     }
   }
 }

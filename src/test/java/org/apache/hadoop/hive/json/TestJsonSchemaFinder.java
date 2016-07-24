@@ -24,9 +24,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.internal.LazilyParsedNumber;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.BlockJUnit4ClassRunner;
 
 import static junit.framework.Assert.assertEquals;
 
+@RunWith(BlockJUnit4ClassRunner.class)
 public class TestJsonSchemaFinder {
 
   @Test
