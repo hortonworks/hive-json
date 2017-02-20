@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Model structs.
+ * Model struct.
  */
 class StructType extends HiveType {
   final Map<String, HiveType> fields = new TreeMap<String, HiveType>();
