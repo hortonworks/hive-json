@@ -13,7 +13,7 @@
     <repository>
       <id>data-nucleus</id>
       <name>data-nucleus</name>
-      <url>http://www.datanucleus.org/downloads/maven2/</url>
+      <url>https://www.datanucleus.org/downloads/maven2/</url>
     </repository>
   </repositories>
     
